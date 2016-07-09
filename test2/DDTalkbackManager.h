@@ -12,7 +12,14 @@ typedef void(^goodFriendInviteResultBlock)(BOOL result, NSString *blockFromUser,
 
 @protocol DDTalkbackManagerDelegate  <NSObject>
 @required
-- (BOOL)whetherAcceptFriendInvitation:(NSString *)userid completion:(goodFriendInviteResultBlock)callback;
+
+/**
+ *  收到好友对讲邀请后的操作
+ *
+ *  @param fromUser   好友的json对象
+ *  @param callback 待用户选择 接受 或 拒绝 后的回调块
+ */
+- (void)whetherAcceptFriendInvitation:(NSString *)fromUser completion:(goodFriendInviteResultBlock)callback;
 
 
 @end
@@ -48,7 +55,7 @@ typedef void(^goodFriendInviteResultBlock)(BOOL result, NSString *blockFromUser,
 - (void)sendAudioData:(NSData *)audioData toUserID:(NSString *)userid;
 
 /**
- *  主动断开和好友的连接
+ *  主动退出和好友的连接
  *
  *  @param fromUser json对象
  *  @param toUserid 被断开者的id
