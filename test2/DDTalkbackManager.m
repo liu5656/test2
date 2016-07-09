@@ -133,7 +133,7 @@
     }
     
     // 处理普通指令
-    if ([@"00" isEqualToString:tempArray.firstObject]) {
+    if ([@"00" isEqualToString:firstInstruction]) {
         if (1 < tempArray.count) {
             NSString *commandStr = tempArray[1];
             if ([commandStr isEqualToString:SocketCommandIdentifyAC]) {
@@ -169,6 +169,20 @@
     [self.clientSocket writeData:data withTimeout:TimeOut tag:0];
 }
 
+
+- (void)disconnectTalkback:(NSString *)fromUser WithUserID:(NSString *)toUserid
+{
+    NSString *message = [NSString stringWithFormat:@"%@|%@|%@", SocketCommandIdentifyED, fromUser, toUserid];
+    NSData *data = [message dataUsingEncoding:NSUTF8StringEncoding];
+    [self.clientSocket writeData:data withTimeout:TimeOut tag:0];
+}
+
+- (void)refuseTalkbackInvitationOfFriendID:(NSString *)toUserID fromUser:(NSString *)fromUser
+{
+    NSString *message = [NSString stringWithFormat:@"%@|%@|%@", SocketCommandIdentifyED, fromUser, toUserID];
+    NSData *data = [message dataUsingEncoding:NSUTF8StringEncoding];
+    [self.clientSocket writeData:data withTimeout:TimeOut tag:0];
+}
 
 /**
  *  收到好友对讲请求
@@ -210,7 +224,7 @@
 /**
  ***************************************************发送或接收数据************************************************************************************
  */
-- (void)sendAudioData:(NSData *)audioData toUserIDOrChannelID:(NSString *)IDStr
+- (void)sendAudioData:(NSData *)audioData toUserID:(NSString *)userid
 {
     NSMutableData *mutableData = [NSMutableData data];
     NSUInteger a = audioData.length;
@@ -223,7 +237,7 @@
     
     NSData *lengthData = [[NSData alloc] initWithBytes:b length:4];
     
-    NSString *tempIDStr =  [IDStr stringByAppendingString:@"\n"];
+    NSString *tempIDStr =  [userid stringByAppendingString:@"\n"];
     NSData *idData = [tempIDStr dataUsingEncoding:NSUTF8StringEncoding];
     
     [mutableData appendData:[SocketCommandIdentifySM dataUsingEncoding:NSUTF8StringEncoding]];

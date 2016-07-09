@@ -31,6 +31,28 @@ typedef void(^goodFriendInviteResultBlock)(BOOL result, NSString *blockFromUser,
  */
 - (void)inviteGoodFriendTalkbackFromUser:(NSString *)fromUser toUserID:(NSString *)toUserID;
 
-- (void)sendAudioData:(NSData *)audioData toUserIDOrChannelID:(NSString *)IDStr;
+/**
+ *  拒绝好友邀请
+ *
+ *  @param toUserID 被拒绝的好友id
+ *  @param fromUser 用户json对象
+ */
+- (void)refuseTalkbackInvitationOfFriendID:(NSString *)toUserID fromUser:(NSString *)fromUser;
+
+/**
+ *  给好友发送音频数据
+ *
+ *  @param audioData 音频数据
+ *  @param IDStr     目标id
+ */
+- (void)sendAudioData:(NSData *)audioData toUserID:(NSString *)userid;
+
+/**
+ *  主动断开和好友的连接
+ *
+ *  @param fromUser json对象
+ *  @param toUserid 被断开者的id
+ */
+- (void)disconnectTalkback:(NSString *)fromUser WithUserID:(NSString *)toUserid;
 
 @end
