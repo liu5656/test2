@@ -27,7 +27,7 @@
     
     self.clientSocket = [[AsyncSocket alloc] initWithDelegate:self];
     NSError *error = nil;
-    [self.clientSocket connectToHost:@"192.168.20.183" onPort:10000 error:&error];
+    [self.clientSocket connectToHost:@"192.168.77.107" onPort:10000 error:&error];
 }
 
 

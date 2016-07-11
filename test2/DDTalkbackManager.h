@@ -30,6 +30,7 @@ typedef void(^goodFriendInviteResultBlock)(BOOL result, NSString *blockFromUser,
 
 + (instancetype)sharedInstance;
 
+
 /**
  *  邀请好友进行对讲
  *

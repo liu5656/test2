@@ -9,7 +9,7 @@
 #import "DDTalkbackManager.h"
 #import "GCDAsyncSocket.h"
 
-#define SocketManagerServerIP @"192.168.20.183"
+#define SocketManagerServerIP @"192.168.77.107"
 #define SocketManagerServerPort 10000
 #define TimeOut 30
 
@@ -28,6 +28,7 @@
 #define SocketCommandIdentifySG @"SG" // 发送语音指令(频道)
 
 // 接收
+#define SocketCommandIdentifyAB @"AB" // 管理服务器返回节点服务器和端口
 #define SocketCommandIdentifyFN @"FN" // 收到好友对讲请求
 
 
@@ -50,12 +51,11 @@
     dispatch_once(&onceToken, ^{
         sharedInstance = [[DDTalkbackManager alloc] init];
         // 先连接管理服务器
-        sharedInstance.clientSocket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:dispatch_get_global_queue(0, 0)];
+        sharedInstance.clientSocket = [[GCDAsyncSocket alloc] initWithDelegate:sharedInstance delegateQueue:dispatch_get_global_queue(0, 0)];
         [sharedInstance.clientSocket connectToHost:SocketManagerServerIP onPort:SocketManagerServerPort error:nil];
     });
     return sharedInstance;
 }
-
 
 - (void)inviteGoodFriendTalkback:(NSString *)toUserID fromUserID:(NSString *)fromUserID andUsername:(NSString *)fromUsername
 {
@@ -76,26 +76,31 @@
     NSLog(@"%@",error);
 }
 
-- (void)sendHeartBeatPacket
-{
-    [self.clientSocket writeData:[@"CK\n" dataUsingEncoding:NSUTF8StringEncoding] withTimeout:15 tag:0];
-    NSLog(@"send heartbeat packet");
-}
 
 #pragma mark GCDAsyncSocketDelegate
+- (void)socket:(GCDAsyncSocket *)sock didWriteDataWithTag:(long)tag
+{
+    NSLog(@"数据已发送");
+}
+
 // 和socket服务器建立连接
 - (void)socket:(GCDAsyncSocket *)sock didConnectToHost:(NSString *)host port:(uint16_t)port
 {
     NSLog(@"did connect to %@, port %hu",host, port);
-    if ([host isEqualToString:SocketManagerServerIP]) {
+    if (port == SocketManagerServerPort) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self timer];
+        });
+        
         // request node server ip and port
-        [self.clientSocket writeData:[SocketCommandIdentifyAC dataUsingEncoding:NSUTF8StringEncoding] withTimeout:-1 tag:0];
+        [self.clientSocket writeData:[[NSString stringWithFormat:@"%@|\n",SocketCommandIdentifyAC] dataUsingEncoding:NSUTF8StringEncoding] withTimeout:-1 tag:0];
     }else {
         // building long connect with node server
-        NSString *LDcommand = [NSString stringWithFormat:@"%@|%@",SocketCommandIdentifyLD, UserID];
+        NSString *LDcommand = [NSString stringWithFormat:@"%@|%@\n",SocketCommandIdentifyLD, UserID];
         [self.clientSocket writeData:[LDcommand dataUsingEncoding:NSUTF8StringEncoding] withTimeout:-1 tag:0];
-        [self timer];
+        
     }
+    [self.clientSocket readDataWithTimeout:15 tag:0];
 }
 
 // 和socket服务器断开连接
@@ -115,7 +120,7 @@
     NSArray *tempArray = [dataStr componentsSeparatedByString:@"|"];
     
     // 收到管理服务器发送的00|AC
-    if ([sock.connectedHost isEqualToString:SocketManagerServerIP] && [SocketCommandIdentifyAC isEqualToString:tempArray.lastObject]) {
+    if ([sock.connectedHost isEqualToString:SocketManagerServerIP] && [SocketCommandIdentifyAB isEqualToString:tempArray.firstObject]) {
         [self disconnectManagerServerAndConnectNodeServer:tempArray[1] port:tempArray.lastObject];
         return;
     }
@@ -141,6 +146,8 @@
                 NSLog(@"message has sended");
             }else if ([commandStr isEqualToString:SocketCommandIdentifyFN]) { // 收到好友发出对讲请求
                 [self acceptGoodFriendInviteFromUserID:tempArray[1] toUserID:tempArray.lastObject];
+            }else if ([commandStr isEqualToString:SocketCommandIdentifyED]) {
+                NSLog(@"好友已经断开和你的对讲连接");
             }
         }
         
@@ -163,7 +170,7 @@
  */
 - (void)inviteGoodFriendTalkbackFromUser:(NSString *)fromUser toUserID:(NSString *)toUserID
 {
-    NSString *message = [NSString stringWithFormat:@"%@|%@|%@", SocketCommandIdentifyFS, fromUser, toUserID];
+    NSString *message = [NSString stringWithFormat:@"%@|%@|%@\n", SocketCommandIdentifyFS, fromUser, toUserID];
     NSData *data = [message dataUsingEncoding:NSUTF8StringEncoding];
     [self.clientSocket writeData:data withTimeout:TimeOut tag:0];
 }
@@ -171,14 +178,14 @@
 
 - (void)disconnectTalkback:(NSString *)fromUser WithUserID:(NSString *)toUserid
 {
-    NSString *message = [NSString stringWithFormat:@"%@|%@|%@", SocketCommandIdentifyED, fromUser, toUserid];
+    NSString *message = [NSString stringWithFormat:@"%@|%@|%@\n", SocketCommandIdentifyED, fromUser, toUserid];
     NSData *data = [message dataUsingEncoding:NSUTF8StringEncoding];
     [self.clientSocket writeData:data withTimeout:TimeOut tag:0];
 }
 
 - (void)refuseTalkbackInvitationOfFriendID:(NSString *)toUserID fromUser:(NSString *)fromUser
 {
-    NSString *message = [NSString stringWithFormat:@"%@|%@|%@", SocketCommandIdentifyED, fromUser, toUserID];
+    NSString *message = [NSString stringWithFormat:@"%@|%@|%@\n", SocketCommandIdentifyED, fromUser, toUserID];
     NSData *data = [message dataUsingEncoding:NSUTF8StringEncoding];
     [self.clientSocket writeData:data withTimeout:TimeOut tag:0];
 }
@@ -267,15 +274,25 @@
 - (NSTimer *)timer
 {
     if (!_timer) {
-        _timer  = [NSTimer scheduledTimerWithTimeInterval:30 target:self selector:@selector(sendHeartBeatPacket) userInfo:nil repeats:YES];
+        _timer = [NSTimer scheduledTimerWithTimeInterval:10 target:self selector:@selector(sendHeartBeatPacket) userInfo:nil repeats:YES];
+//        [[NSRunLoop currentRunLoop] addTimer:_timer forMode:NSDefaultRunLoopMode];
+        [_timer fire];
     }
     return _timer;
 }
 
+- (void)sendHeartBeatPacket
+{
+    NSLog(@"send heartbeat packet");
+    [self.clientSocket writeData:[@"CK|\n" dataUsingEncoding:NSUTF8StringEncoding] withTimeout:15 tag:0];
+
+}
+
+
 #pragma mark life circle
 - (void)dealloc
 {
-    NSLog(@"%@",__func__);
+    NSLog(@"%s",__func__);
 }
 
 
