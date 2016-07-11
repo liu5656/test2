@@ -8,6 +8,7 @@
 
 #import "DDTalkbackManager.h"
 #import "GCDAsyncSocket.h"
+#import "MessageData.h"
 
 #define SocketManagerServerIP @"192.168.77.107"
 #define SocketManagerServerPort 10000
@@ -39,6 +40,9 @@
 @property (nonatomic, strong) NSTimer *timer;
 
 @property (nonatomic, strong) GCDAsyncSocket *clientSocket;
+
+@property (nonatomic, strong) NSMutableData *SMData;
+@property (nonatomic, strong) NSData *leftData;
 
 @end
 
@@ -115,8 +119,41 @@
 // 收到数据
 - (void)socket:(GCDAsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag
 {
+
+//    if (data.length < 2) {
+//        [self.SMData appendData:data];
+//        return;
+//    }
+//
+//    NSData *indexData = [self.SMData subdataWithRange:NSMakeRange(0, 1)];
+//    NSString *indexStr = [[NSString alloc] initWithData:indexData encoding:NSUTF8StringEncoding];
+//    if ([indexStr isEqualToString:SocketCommandIdentifySM]) {
+//        if (self.SMData.length < 6) {
+//            [self.SMData appendData:data];
+//            return;
+//        }
+//    }
+    [self.SMData appendData:data];
+    if (self.SMData.length < 6) {
+        return;
+    }
+    NSData *lengthData = [self.SMData subdataWithRange:NSMakeRange(2, 5)];
+    int length = convertDataToInt(lengthData);
+    
+    if (self.SMData.length < (length + 6)) {
+        return;
+    }else{
+        self.leftData = [data subdataWithRange:NSMakeRange(data.length - (self.SMData.length - length - 6) - 1, self.SMData.length - length - 6)];
+    }
+    
+/*
+ ************************************************************************************************************************************
+ */
+    
+    
     NSString *dataStr = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
     NSLog(@"has received data:%@",dataStr);
+    NSLog(@"包长度:%ld",data.length);
     NSArray *tempArray = [dataStr componentsSeparatedByString:@"|"];
     
     // 收到管理服务器发送的00|AC
@@ -143,7 +180,8 @@
             }else if ([commandStr isEqualToString:SocketCommandIdentifyCK]) {
                 
             }else if ([commandStr isEqualToString:SocketCommandIdentifySM]) {
-                NSLog(@"message has sended");
+//                NSLog(@"message has sended");
+                
             }else if ([commandStr isEqualToString:SocketCommandIdentifyFN]) { // 收到好友发出对讲请求
                 [self acceptGoodFriendInviteFromUserID:tempArray[1] toUserID:tempArray.lastObject];
             }else if ([commandStr isEqualToString:SocketCommandIdentifyED]) {
@@ -275,7 +313,6 @@
 {
     if (!_timer) {
         _timer = [NSTimer scheduledTimerWithTimeInterval:10 target:self selector:@selector(sendHeartBeatPacket) userInfo:nil repeats:YES];
-//        [[NSRunLoop currentRunLoop] addTimer:_timer forMode:NSDefaultRunLoopMode];
         [_timer fire];
     }
     return _timer;
@@ -293,6 +330,24 @@
 - (void)dealloc
 {
     NSLog(@"%s",__func__);
+}
+
+
+#pragma mark c function
+NSData *convertIntToData(int totallength)
+{
+    unsigned char* totallengthByte =malloc(sizeof(unsigned char) * 4);
+    totallengthByte[0] = (char)(totallength >>24 & 0xff);
+    totallengthByte[1] = (char)((totallength >> 16) & 0xff);
+    totallengthByte[2] = (char)((totallength >> 8) & 0xff);
+    totallengthByte[3] = (char)((totallength) & 0xff);
+    NSData *data = [NSData dataWithBytes:totallengthByte length:4];
+    return data;
+}
+
+int convertDataToInt(NSData *data)
+{
+    return CFSwapInt32BigToHost(*(int*)([data bytes]));
 }
 
 

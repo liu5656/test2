@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		2A04A1CD1C8975D400CADA63 /* AsyncSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = 2A04A1CC1C8975D400CADA63 /* AsyncSocket.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		2A25995F1D33A96E0024EA94 /* MessageData.m in Sources */ = {isa = PBXBuildFile; fileRef = 2A25995E1D33A96E0024EA94 /* MessageData.m */; };
 		2A28BB521C8199A700DDECED /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 2A28BB511C8199A700DDECED /* main.m */; };
 		2A28BB551C8199A700DDECED /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 2A28BB541C8199A700DDECED /* AppDelegate.m */; };
 		2A28BB581C8199A700DDECED /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 2A28BB571C8199A700DDECED /* ViewController.m */; };
@@ -27,6 +28,8 @@
 /* Begin PBXFileReference section */
 		2A04A1CB1C8975D400CADA63 /* AsyncSocket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AsyncSocket.h; sourceTree = "<group>"; };
 		2A04A1CC1C8975D400CADA63 /* AsyncSocket.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AsyncSocket.m; sourceTree = "<group>"; };
+		2A25995D1D33A96E0024EA94 /* MessageData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MessageData.h; sourceTree = "<group>"; };
+		2A25995E1D33A96E0024EA94 /* MessageData.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MessageData.m; sourceTree = "<group>"; };
 		2A28BB4D1C8199A700DDECED /* test2.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = test2.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2A28BB511C8199A700DDECED /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		2A28BB531C8199A700DDECED /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
@@ -98,6 +101,8 @@
 				2A86C5A11D3095E700AF0EEA /* xxxxViewController.m */,
 				2A4FDB2A1D30CD7F003630AD /* DDTalkbackManager.h */,
 				2A4FDB2B1D30CD7F003630AD /* DDTalkbackManager.m */,
+				2A25995D1D33A96E0024EA94 /* MessageData.h */,
+				2A25995E1D33A96E0024EA94 /* MessageData.m */,
 				2AF80A911D336C9B00BC41B6 /* DDTalkbackDemoViewController.h */,
 				2AF80A921D336C9B00BC41B6 /* DDTalkbackDemoViewController.m */,
 				2A28BB591C8199A800DDECED /* Main.storyboard */,
@@ -153,7 +158,7 @@
 				TargetAttributes = {
 					2A28BB4C1C8199A700DDECED = {
 						CreatedOnToolsVersion = 7.2;
-						DevelopmentTeam = 2D58CNG8UK;
+						DevelopmentTeam = 3MG8CK8APH;
 					};
 				};
 			};
@@ -197,6 +202,7 @@
 				2A4FDB221D30CA96003630AD /* GCDAsyncSocket.m in Sources */,
 				2A4FDB231D30CA96003630AD /* GCDAsyncUdpSocket.m in Sources */,
 				2A28BB581C8199A700DDECED /* ViewController.m in Sources */,
+				2A25995F1D33A96E0024EA94 /* MessageData.m in Sources */,
 				2AF80A931D336C9B00BC41B6 /* DDTalkbackDemoViewController.m in Sources */,
 				2A86C5A21D3095E700AF0EEA /* xxxxViewController.m in Sources */,
 				2AAFE4501D2F782300C179F2 /* TCPViewController.m in Sources */,

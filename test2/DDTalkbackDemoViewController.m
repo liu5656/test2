@@ -38,6 +38,26 @@
     self.talkbackManager = [DDTalkbackManager sharedInstance];
 //    self.talkbackManager = [[DDTalkbackManager alloc] init];
     
+    
+    AVAudioSession *avSession = [AVAudioSession sharedInstance];
+    
+    if ([avSession respondsToSelector:@selector(requestRecordPermission:)]) {
+        
+        [avSession requestRecordPermission:^(BOOL available) {
+            
+            if (available) {
+                //completionHandler
+            }
+            else
+            {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [[[UIAlertView alloc] initWithTitle:@"无法录音" message:@"请在“设置-隐私-麦克风”选项中允许xx访问你的麦克风" delegate:nil cancelButtonTitle:@"确定" otherButtonTitles:nil] show];
+                });
+            }
+        }];
+        
+    }
+    
 }
 
 - (void)didReceiveMemoryWarning {
