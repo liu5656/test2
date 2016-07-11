@@ -21,6 +21,7 @@
 		2A86C5A21D3095E700AF0EEA /* xxxxViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 2A86C5A11D3095E700AF0EEA /* xxxxViewController.m */; };
 		2A942ED61D2F919C00351067 /* AudioViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 2A942ED51D2F919C00351067 /* AudioViewController.m */; };
 		2AAFE4501D2F782300C179F2 /* TCPViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 2AAFE44F1D2F782300C179F2 /* TCPViewController.m */; };
+		2AF80A931D336C9B00BC41B6 /* DDTalkbackDemoViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 2AF80A921D336C9B00BC41B6 /* DDTalkbackDemoViewController.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -49,6 +50,8 @@
 		2A942ED51D2F919C00351067 /* AudioViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AudioViewController.m; sourceTree = "<group>"; };
 		2AAFE44E1D2F782300C179F2 /* TCPViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TCPViewController.h; sourceTree = "<group>"; };
 		2AAFE44F1D2F782300C179F2 /* TCPViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TCPViewController.m; sourceTree = "<group>"; };
+		2AF80A911D336C9B00BC41B6 /* DDTalkbackDemoViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DDTalkbackDemoViewController.h; sourceTree = "<group>"; };
+		2AF80A921D336C9B00BC41B6 /* DDTalkbackDemoViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DDTalkbackDemoViewController.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -95,6 +98,8 @@
 				2A86C5A11D3095E700AF0EEA /* xxxxViewController.m */,
 				2A4FDB2A1D30CD7F003630AD /* DDTalkbackManager.h */,
 				2A4FDB2B1D30CD7F003630AD /* DDTalkbackManager.m */,
+				2AF80A911D336C9B00BC41B6 /* DDTalkbackDemoViewController.h */,
+				2AF80A921D336C9B00BC41B6 /* DDTalkbackDemoViewController.m */,
 				2A28BB591C8199A800DDECED /* Main.storyboard */,
 				2A4FDB1E1D30CA96003630AD /* GCDAsyncSocket.h */,
 				2A4FDB1F1D30CA96003630AD /* GCDAsyncSocket.m */,
@@ -192,6 +197,7 @@
 				2A4FDB221D30CA96003630AD /* GCDAsyncSocket.m in Sources */,
 				2A4FDB231D30CA96003630AD /* GCDAsyncUdpSocket.m in Sources */,
 				2A28BB581C8199A700DDECED /* ViewController.m in Sources */,
+				2AF80A931D336C9B00BC41B6 /* DDTalkbackDemoViewController.m in Sources */,
 				2A86C5A21D3095E700AF0EEA /* xxxxViewController.m in Sources */,
 				2AAFE4501D2F782300C179F2 /* TCPViewController.m in Sources */,
 				2A28BB551C8199A700DDECED /* AppDelegate.m in Sources */,

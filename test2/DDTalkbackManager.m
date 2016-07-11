@@ -35,6 +35,8 @@
 
 @interface DDTalkbackManager()<GCDAsyncSocketDelegate>
 
+@property (nonatomic, strong) NSTimer *timer;
+
 @property (nonatomic, strong) GCDAsyncSocket *clientSocket;
 
 @end
@@ -74,12 +76,6 @@
     NSLog(@"%@",error);
 }
 
-
-- (void)preperSendHeartbeat
-{
-    [NSTimer scheduledTimerWithTimeInterval:30 target:self selector:@selector(sendHeartBeatPacket) userInfo:nil repeats:YES];
-}
-
 - (void)sendHeartBeatPacket
 {
     [self.clientSocket writeData:[@"CK\n" dataUsingEncoding:NSUTF8StringEncoding] withTimeout:15 tag:0];
@@ -98,6 +94,7 @@
         // building long connect with node server
         NSString *LDcommand = [NSString stringWithFormat:@"%@|%@",SocketCommandIdentifyLD, UserID];
         [self.clientSocket writeData:[LDcommand dataUsingEncoding:NSUTF8StringEncoding] withTimeout:-1 tag:0];
+        [self timer];
     }
 }
 
@@ -117,8 +114,8 @@
     NSLog(@"has received data:%@",dataStr);
     NSArray *tempArray = [dataStr componentsSeparatedByString:@"|"];
     
-    
-    if ([sock.connectedHost isEqualToString:SocketManagerServerIP]) {
+    // 收到管理服务器发送的00|AC
+    if ([sock.connectedHost isEqualToString:SocketManagerServerIP] && [SocketCommandIdentifyAC isEqualToString:tempArray.lastObject]) {
         [self disconnectManagerServerAndConnectNodeServer:tempArray[1] port:tempArray.lastObject];
         return;
     }
@@ -158,6 +155,8 @@
     }
     [self.clientSocket readDataWithTimeout:-1 tag:0];
 }
+
+
 
 /**
  ***************************************************好友对讲************************************************************************************
@@ -264,6 +263,20 @@
     
 }
 
+#pragma mark get
+- (NSTimer *)timer
+{
+    if (!_timer) {
+        _timer  = [NSTimer scheduledTimerWithTimeInterval:30 target:self selector:@selector(sendHeartBeatPacket) userInfo:nil repeats:YES];
+    }
+    return _timer;
+}
+
+#pragma mark life circle
+- (void)dealloc
+{
+    NSLog(@"%@",__func__);
+}
 
 
 @end
