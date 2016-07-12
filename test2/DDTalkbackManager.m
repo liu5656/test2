@@ -28,10 +28,12 @@
 #define SocketCommandIdentifySM @"SM" // 发送语音指令(好友)
 #define SocketCommandIdentifySG @"SG" // 发送语音指令(频道)
 
+
 // 接收
 #define SocketCommandIdentifyAB @"AB" // 管理服务器返回节点服务器和端口
 #define SocketCommandIdentifyFN @"FN" // 收到好友对讲请求
-
+#define SocketCommandIdentify00 @"00" // 收到回复00
+#define SocketCommandIdentifyEX @"EX" // 异常
 
 
 
@@ -77,7 +79,7 @@
     self.clientSocket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:dispatch_get_global_queue(0, 0)];
     NSError *error = nil;
     [self.clientSocket connectToHost:host onPort:portStr.integerValue error:&error];
-    NSLog(@"%@",error);
+    NSLog(@"重新连接只节点服务器错误:%@",error);
 }
 
 
@@ -93,7 +95,7 @@
     NSLog(@"did connect to %@, port %hu",host, port);
     if (port == SocketManagerServerPort) {
         dispatch_async(dispatch_get_main_queue(), ^{
-            [self timer];
+//            [self timer];
         });
         
         // request node server ip and port
@@ -119,36 +121,105 @@
 // 收到数据
 - (void)socket:(GCDAsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag
 {
-
-//    if (data.length < 2) {
-//        [self.SMData appendData:data];
-//        return;
-//    }
-//
-//    NSData *indexData = [self.SMData subdataWithRange:NSMakeRange(0, 1)];
-//    NSString *indexStr = [[NSString alloc] initWithData:indexData encoding:NSUTF8StringEncoding];
-//    if ([indexStr isEqualToString:SocketCommandIdentifySM]) {
-//        if (self.SMData.length < 6) {
-//            [self.SMData appendData:data];
-//            return;
-//        }
-//    }
+    [self.clientSocket readDataWithTimeout:-1 tag:0];
+    // 黏包
+    if (self.leftData.length) {
+        NSMutableData *tempData = [NSMutableData dataWithData:self.leftData];
+        [tempData appendData:data];
+        data = [NSData dataWithData:tempData];
+        self.leftData = nil;
+    }
+    
+    
+    // 直到大于2
     [self.SMData appendData:data];
-    if (self.SMData.length < 6) {
+    if(self.SMData.length < 2) {
         return;
     }
-    NSData *lengthData = [self.SMData subdataWithRange:NSMakeRange(2, 5)];
-    int length = convertDataToInt(lengthData);
     
-    if (self.SMData.length < (length + 6)) {
-        return;
-    }else{
-        self.leftData = [data subdataWithRange:NSMakeRange(data.length - (self.SMData.length - length - 6) - 1, self.SMData.length - length - 6)];
+    NSData *messageTypeData = [self.SMData subdataWithRange:NSMakeRange(0, 2)];
+    NSString *messageTypeStr = [[NSString alloc] initWithData:messageTypeData encoding:NSUTF8StringEncoding];
+    /*
+     ****************************************************音频****************************************************************************
+     */
+    if ([SocketCommandIdentifySM isEqualToString:messageTypeStr]) { // 收到音频数据
+        NSLog(@"收到命令:%@------当前收到的包的长度:%ld",messageTypeStr, data.length);
+        NSInteger totalLength = 0;
+        NSData *audioData = nil;
+        NSData *useridData = nil;
+        if (self.SMData.length < 6) {
+            return;
+        }
+        
+        NSData *totalLengthData = [self.SMData subdataWithRange:NSMakeRange(2, 4)];
+        totalLength = convertDataToInt(totalLengthData);
+        
+        if (self.SMData.length < (totalLength + 6)) {
+            return;
+        }else{
+            audioData = [self.SMData subdataWithRange:NSMakeRange(6, totalLength)];
+        }
+        
+        // 找到音频数据结束后的换行符的range
+        NSRange range = [self.SMData rangeOfData:[@"\n" dataUsingEncoding:NSUTF8StringEncoding] options:NSDataSearchBackwards range:NSMakeRange(totalLength + 6, self.SMData.length - totalLength - 6)];
+        if (range.location != NSNotFound) {
+            // 拿到userid
+            useridData = [self.SMData subdataWithRange:NSMakeRange(totalLength + 6, range.location - (totalLength + 6) - 1)];
+        }
+        
+        NSString *useridStr = [[NSString alloc] initWithData:useridData encoding:NSUTF8StringEncoding];
+        NSString *path = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject stringByAppendingPathComponent:useridStr];
+        BOOL result = [audioData writeToFile:path atomically:YES];
+        if (result) {
+            NSLog(@"创建文件成功:%@",path);
+        }else{
+            NSLog(@"创建文件失败");
+        }
+        
+        self.leftData = [self.SMData subdataWithRange:NSMakeRange(range.location + 1, self.SMData.length - (range.location + range.length - 1) )];
+        self.SMData = nil;
+        
+        /*
+         ****************************************************其他****************************************************************************
+         */
+        
+    }else if ([SocketCommandIdentifyAB isEqualToString:messageTypeStr]) { // 管理服务器回复
+        NSString *dataStr = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+        NSArray *tempArray = [dataStr componentsSeparatedByString:@"|"];
+        [self disconnectManagerServerAndConnectNodeServer:tempArray[1] port:tempArray.lastObject];
+    }else if ([SocketCommandIdentify00 isEqualToString:messageTypeStr]) { // 其他回复
+        NSLog(@"收到命令:00--%@", [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]);
+    }else if ([SocketCommandIdentifyAC isEqualToString:messageTypeStr]) { // 连接管理服务器回复
+        NSLog(@"收到命令:AC");
+    }else if ([SocketCommandIdentifyCK isEqualToString:messageTypeStr]) { // 心跳包回复
+        NSLog(@"收到命令:CK");
+    }else if ([SocketCommandIdentifyFN isEqualToString:messageTypeStr]) { // 收到好友发出对讲请求
+        NSLog(@"收到命令:FN");
+        
+        NSString *dataStr = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+        NSArray *tempArray = [dataStr componentsSeparatedByString:@"|"];
+        [self acceptGoodFriendInviteFromUserID:tempArray[1] toUserID:tempArray.lastObject];
+        
+        
+    }else if ([SocketCommandIdentifyED isEqualToString:messageTypeStr]) { // 断开和好友的对讲回复
+        NSLog(@"收到命令:ED");
+    }else if ([SocketCommandIdentifyEX isEqualToString:messageTypeStr]) { // 异常
+        NSLog(@"收到命令:EX");
+    }else{ // 丢弃
+    
     }
+
+    self.SMData = nil;
     
-/*
- ************************************************************************************************************************************
- */
+    
+//    [self test:data andSocket:sock];
+}
+
+- (void)test:(NSData *)data andSocket:(GCDAsyncSocket *)sock
+{
+    /*
+     ************************************************************************************************************************************
+     */
     
     
     NSString *dataStr = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
@@ -180,7 +251,7 @@
             }else if ([commandStr isEqualToString:SocketCommandIdentifyCK]) {
                 
             }else if ([commandStr isEqualToString:SocketCommandIdentifySM]) {
-//                NSLog(@"message has sended");
+                //                NSLog(@"message has sended");
                 
             }else if ([commandStr isEqualToString:SocketCommandIdentifyFN]) { // 收到好友发出对讲请求
                 [self acceptGoodFriendInviteFromUserID:tempArray[1] toUserID:tempArray.lastObject];
@@ -199,6 +270,7 @@
         }
     }
     [self.clientSocket readDataWithTimeout:-1 tag:0];
+
 }
 
 
@@ -323,6 +395,14 @@
     NSLog(@"send heartbeat packet");
     [self.clientSocket writeData:[@"CK|\n" dataUsingEncoding:NSUTF8StringEncoding] withTimeout:15 tag:0];
 
+}
+
+- (NSMutableData *)SMData
+{
+    if (!_SMData) {
+        _SMData = [NSMutableData data];
+    }
+    return _SMData;
 }
 
 
