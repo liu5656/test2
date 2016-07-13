@@ -10,7 +10,7 @@
 #import "GCDAsyncSocket.h"
 #import "MessageData.h"
 
-#define SocketManagerServerIP @"192.168.77.118"
+#define SocketManagerServerIP @"192.168.77.109"
 #define SocketManagerServerPort 10000
 #define TimeOut 30
 
@@ -128,10 +128,7 @@
 // 收到数据
 - (void)socket:(GCDAsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag
 {
-    
-    
     [self test5:data andSocket:sock];
-    
 }
 
 - (void)test5:(NSData *)data andSocket:(GCDAsyncSocket *)sock
