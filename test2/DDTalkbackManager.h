@@ -8,8 +8,14 @@
 
 #import <Foundation/Foundation.h>
 
-typedef void(^goodFriendInviteResultBlock)(BOOL result, NSString *blockFromUser, NSString *blockToUserID);
+typedef enum : NSUInteger {
+    TalkbackTypeFriend = 1,
+    TalkbackTypeChannel,
+} TalkbackType;
 
+typedef void(^goodFriendInviteResultBlock)(BOOL result, NSString *blockFromUser, NSString *blockToUserID);
+typedef void (^channelInviteResultBlock)(BOOL result, NSString *blockToUser, NSString *blockFromChannel);
+typedef void (^channelCallback)(BOOL result, NSString *blockSender, NSString *blockChannel);
 @protocol DDTalkbackManagerDelegate  <NSObject>
 @required
 
@@ -21,6 +27,25 @@ typedef void(^goodFriendInviteResultBlock)(BOOL result, NSString *blockFromUser,
  */
 - (void)whetherAcceptFriendInvitation:(NSString *)fromUser completion:(goodFriendInviteResultBlock)callback;
 
+/**
+ *  进入频道时,没人对讲,是否邀请频道成员进行对讲回调块
+ *
+ *  @param result 是否邀请
+ *  @param blocksender 发送邀请的对象json
+ *  @param bolcKChannel 向哪个频道发送
+ */
+- (void)whetherInviteOtherChannelMemeberAftercompletion:(channelCallback)callback;
+
+/**
+ *  收到频道对讲邀请
+ *
+ *  @param result 是否接受邀请
+ *  @param blocksender 发送邀请对象
+ *  @param bolcKChannel 向哪个频道发送
+ *  @param callback 用户选择回调块{"userid":"user10300","username":"我是大魔王"}|{"groupId":"10060","groupName":"飙车俱乐部"}
+ */
+- (void)whetherAcceptChannelInvitation:(NSString *)channel completion:(channelCallback)callback;
+
 
 @end
 
@@ -30,6 +55,17 @@ typedef void(^goodFriendInviteResultBlock)(BOOL result, NSString *blockFromUser,
 
 + (instancetype)sharedInstance;
 
+/**
+ *  发送语音数据
+ *
+ *  @param audioData 音频数据
+ *  @param senderid  发送者id
+ *  @param type      目标类型,好友 频道
+ */
+- (void)sendAudioData:(NSData *)audioData andSenderID:(NSString *)senderid withTalkbackType:(TalkbackType)type;
+/**
+ ********************************************好友对讲************************************************************************************
+ */
 
 /**
  *  邀请好友进行对讲 FS|发起者对象|接收者ID FS|{"userid":"user10300","username","张鹏飞"}|user10200
@@ -47,13 +83,6 @@ typedef void(^goodFriendInviteResultBlock)(BOOL result, NSString *blockFromUser,
  */
 - (void)refuseTalkbackInvitationOfFriendID:(NSString *)toUserID fromUser:(NSString *)fromUser;
 
-/**
- *  给好友发送音频数据 e.g:SM|语音部分的字节数|二进制语音|说话者userId
- *
- *  @param audioData 音频数据
- *  @param IDStr     目标id
- */
-- (void)sendAudioData:(NSData *)audioData toUserID:(NSString *)userid;
 
 /**
  *  主动退出和好友的连接 ED|发起者对象 e.g:ED|{"userid":"user10300","username":"user10300"}
@@ -76,6 +105,14 @@ typedef void(^goodFriendInviteResultBlock)(BOOL result, NSString *blockFromUser,
  */
 - (void)requestJoinChannelTalkback:(NSString *)channelJsonModel andFromUser:(NSString *)fromUser;
 
-//- (void)
+
+/**
+ *  发出退出指令，目标node服务器；协议：EG|退出者对象|频道对象
+ *  e.g:EG|{"userid":"user10300","username":"我是大魔王"}|{"groupId":"10060","groupName":"飙车俱乐部"}
+ *
+ *  @param channelJsonModel 频道Json对象
+ *  @param fromUser         退出者对象
+ */
+- (void)quiteCurrentChannelTalkback:(NSString *)channelJsonModel andFromUser:(NSString *)fromUser;
 
 @end

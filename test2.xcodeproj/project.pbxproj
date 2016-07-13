@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		2A04A1CD1C8975D400CADA63 /* AsyncSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = 2A04A1CC1C8975D400CADA63 /* AsyncSocket.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		2A16E5801D3665AC00DC0722 /* NSString+Model.m in Sources */ = {isa = PBXBuildFile; fileRef = 2A16E57F1D3665AC00DC0722 /* NSString+Model.m */; };
 		2A25995F1D33A96E0024EA94 /* MessageData.m in Sources */ = {isa = PBXBuildFile; fileRef = 2A25995E1D33A96E0024EA94 /* MessageData.m */; };
 		2A28BB521C8199A700DDECED /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 2A28BB511C8199A700DDECED /* main.m */; };
 		2A28BB551C8199A700DDECED /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 2A28BB541C8199A700DDECED /* AppDelegate.m */; };
@@ -28,6 +29,8 @@
 /* Begin PBXFileReference section */
 		2A04A1CB1C8975D400CADA63 /* AsyncSocket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AsyncSocket.h; sourceTree = "<group>"; };
 		2A04A1CC1C8975D400CADA63 /* AsyncSocket.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AsyncSocket.m; sourceTree = "<group>"; };
+		2A16E57E1D3665AC00DC0722 /* NSString+Model.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSString+Model.h"; sourceTree = "<group>"; };
+		2A16E57F1D3665AC00DC0722 /* NSString+Model.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSString+Model.m"; sourceTree = "<group>"; };
 		2A25995D1D33A96E0024EA94 /* MessageData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MessageData.h; sourceTree = "<group>"; };
 		2A25995E1D33A96E0024EA94 /* MessageData.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MessageData.m; sourceTree = "<group>"; };
 		2A28BB4D1C8199A700DDECED /* test2.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = test2.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -110,6 +113,8 @@
 				2A4FDB1F1D30CA96003630AD /* GCDAsyncSocket.m */,
 				2A4FDB201D30CA96003630AD /* GCDAsyncUdpSocket.h */,
 				2A4FDB211D30CA96003630AD /* GCDAsyncUdpSocket.m */,
+				2A16E57E1D3665AC00DC0722 /* NSString+Model.h */,
+				2A16E57F1D3665AC00DC0722 /* NSString+Model.m */,
 				2A28BB5C1C8199A800DDECED /* Assets.xcassets */,
 				2A28BB5E1C8199A800DDECED /* LaunchScreen.storyboard */,
 				2A28BB611C8199A800DDECED /* Info.plist */,
@@ -199,6 +204,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				2A4FDB221D30CA96003630AD /* GCDAsyncSocket.m in Sources */,
+				2A16E5801D3665AC00DC0722 /* NSString+Model.m in Sources */,
 				2A4FDB231D30CA96003630AD /* GCDAsyncUdpSocket.m in Sources */,
 				2A28BB581C8199A700DDECED /* ViewController.m in Sources */,
 				2A25995F1D33A96E0024EA94 /* MessageData.m in Sources */,
@@ -336,6 +342,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				INFOPLIST_FILE = test2/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 8.1;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";

@@ -9,15 +9,17 @@
 #import "DDTalkbackManager.h"
 #import "GCDAsyncSocket.h"
 #import "MessageData.h"
+#import "NSString+Model.h"
 
 #define SocketManagerServerIP @"192.168.77.109"
 #define SocketManagerServerPort 10000
 #define TimeOut 30
 
-#define UserID @"user10058"
+#define UserID @"user10300"
 #define Username @"bigheart"
 #define FriendID @"user10100"
-// 发送
+
+#pragma mark send command
 #define SocketCommandIdentifyAC @"AC" // 管理服务器指令
 #define SocketCommandIdentifyLD @"LD" // 和节点服务器建立长连接指令
 #define SocketCommandIdentifyCK @"CK" // 心跳指令
@@ -28,13 +30,33 @@
 #define SocketCommandIdentifySM @"SM" // 发送语音指令(好友)
 #define SocketCommandIdentifySG @"SG" // 发送语音指令(频道)
 
+#pragma mark channel send command
+#define SocketCommandIdentifyGS @"GS" // 发出进入频道对讲的指令：GS|{"userid":"user10300","username":"我是大魔王"}|{"groupId":"10060","groupName":"飙车俱乐部"}
+#define SocketCommandIdentifyEG @"EG" // 退出当前正在对讲的频道 EG|{"userid":"user10300","username":"我是大魔王"}|{"groupId":"10060","groupName":"飙车俱乐部"}
+#define SocketCommandIdentifyGM @"GM" // 进入频道没人对讲时,邀请 GM|{"userid":"user10300","username":"我是大魔王"}|{"groupId":"10060","groupName":"飙车俱乐部"}
 
-// 接收
+
+#pragma mark receive command
 #define SocketCommandIdentifyAB @"AB" // 管理服务器返回节点服务器和端口
 #define SocketCommandIdentifyFN @"FN" // 收到好友对讲请求
 #define SocketCommandIdentify00 @"00" // 收到回复00
 #define SocketCommandIdentifyEX @"EX" // 异常
 #define SocketCommandIdentifyET @"ET" // 音频结束
+#define SocketCommandIdentifyAL @"AL" // 频道有人在对讲,节点相同,进入频道后就可以收到 AL|已经进入的人员列表
+#define SocketCommandIdentifyGB @"GB" // 频道有人在对讲,节点不同,需要连接到此返回的节点服务器和端口后发送LD命令成功后就可以使用GS进入频道
+
+#pragma mark channel receive command
+#define SocketCommandIdentifyNT @"NT" // 有人进入频道时：协议：NT|新进入对象|频道对象
+#define SocketCommandIdentifyEG @"EG" // 有人退出频道时：协议：EG|退出者对象|频道对象
+#define SocketCommandIdentifySG @"SG" // 发送或接收频道语音 SG(|)语音部分的字节数(|)二进制语音(|)说话者userId
+
+
+
+typedef enum : NSUInteger {
+    SocketExceptionTypeNobodyOnline = 0, // 没人在线,没人对讲
+    SocketExceptionTypeNobodyOnTalk = 91, // 有人在线,没人对讲
+    SocketExceptionTypeFriendNotOnline = 90, // 好友不在线
+} SocketExceptionType;
 
 
 @interface DDTalkbackManager()<GCDAsyncSocketDelegate>
@@ -50,6 +72,11 @@
 @property (nonatomic, strong) NSData *useridData;
 
 @property (nonatomic, assign) int number;
+
+
+// 接受邀请时,需要跟换节点服务器时暂时保存这两个对象
+@property (nonatomic, strong) NSString *sender;
+@property (nonatomic, copy) NSString *channel;
 
 @end
 
@@ -185,6 +212,8 @@
             }
             
             offset += (useridData.length + 1); // 加1是为了跨过换行符
+         
+        }else if ([SocketCommandIdentifySG isEqualToString:messageTypeStr]) { // 频道收到音频数据
             
         }else if ([SocketCommandIdentifyET isEqualToString:messageTypeStr]) { // 音频结束
             NSData *tempData = [self offset:data andOffset:&offset];
@@ -210,6 +239,7 @@
             NSLog(@"收到命令:00--%@", [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]);
             NSData *tempData = [self offset:data andOffset:&offset];
             if (tempData.length == 0) break;
+            [self handleCommonResponseData:data];
         }else if ([SocketCommandIdentifyAC isEqualToString:messageTypeStr]) { // 连接管理服务器回复
             NSLog(@"收到命令:AC");
             NSData *tempData = [self offset:data andOffset:&offset];
@@ -231,10 +261,26 @@
             NSLog(@"收到命令:ED");
             NSData *tempData = [self offset:data andOffset:&offset];
             if (tempData.length == 0) break;
+        /*
+         ******************************频道****************************************
+         */
+        }else if ([SocketCommandIdentifyGM isEqualToString:messageTypeStr]) { // 收到频道邀请
+            NSData *tempData = [self offset:data andOffset:&offset];
+            if (tempData.length == 0) break;
+            
+            [self handleChannelInviteation:data];
+        }else if ([SocketCommandIdentifyAL isEqualToString:messageTypeStr]) { // 进入频道,得到对讲人员列表
+            NSData *tempData = [self offset:data andOffset:&offset];
+            if (tempData.length == 0) break;
+            
+            NSString *list = [[NSString alloc] initWithData:tempData encoding:NSUTF8StringEncoding];
+            NSLog(@"进入频道,得到对讲人员列表:%@",list);
+            
         }else if ([SocketCommandIdentifyEX isEqualToString:messageTypeStr]) { // 异常
             NSLog(@"收到命令:EX");
             NSData *tempData = [self offset:data andOffset:&offset];
             if (tempData.length == 0) break;
+            [self handleExceptionFromServer:tempData];
         }else{
             [self.clientSocket readDataWithTimeout:-1 tag:0];
             return;
@@ -249,7 +295,6 @@
     }
     
     [self.clientSocket readDataWithTimeout:-1 tag:0];
-//    NSLog(@"while之后解包次数%d",_number);
     NSLog(@"当前线程:%@,循环之后:audiodata长度:%ld, -------上一次残缺数据剩余:%ld",[NSThread currentThread],self.audioData.length, self.leftData.length);
 }
 
@@ -274,9 +319,7 @@
 
 
 
-/**
- ***************************************************好友对讲************************************************************************************
- */
+#pragma mark ***************************************************好友对讲************************************************************************
 - (void)inviteGoodFriendTalkbackFromUser:(NSString *)fromUser toUserID:(NSString *)toUserID
 {
     NSString *message = [NSString stringWithFormat:@"%@|%@|%@\n", SocketCommandIdentifyFS, fromUser, toUserID];
@@ -336,10 +379,8 @@
 }
 
 
-/**
- ***************************************************发送或接收数据************************************************************************************
- */
-- (void)sendAudioData:(NSData *)audioData toUserID:(NSString *)userid
+#pragma mark ***************************************************发送或接收数据*******************************************************************
+- (void)sendAudioData:(NSData *)audioData andSenderID:(NSString *)senderid withTalkbackType:(TalkbackType)type
 {
     NSMutableData *mutableData = [NSMutableData data];
     NSUInteger a = audioData.length;
@@ -352,31 +393,127 @@
     
     NSData *lengthData = [[NSData alloc] initWithBytes:b length:4];
     
-    NSString *tempIDStr =  [userid stringByAppendingString:@"\n"];
+    NSString *tempIDStr =  [senderid stringByAppendingString:@"\n"];
     NSData *idData = [tempIDStr dataUsingEncoding:NSUTF8StringEncoding];
     
-    [mutableData appendData:[SocketCommandIdentifySM dataUsingEncoding:NSUTF8StringEncoding]];
+    NSString *commandStr = [NSString stringWithFormat:@"%@|",type == TalkbackTypeFriend ? SocketCommandIdentifySM : SocketCommandIdentifySG];
+    NSData *commandData = [commandStr dataUsingEncoding:NSUTF8StringEncoding];
+    
+    [mutableData appendData:commandData];
     [mutableData appendData:lengthData];
     [mutableData appendData:audioData];
     [mutableData appendData:idData];
     
     NSLog(@"send data length:%ld",mutableData.length);
     
-    //    dispatch_async(dispatch_get_main_queue(), ^{
-    [self.clientSocket writeData:mutableData withTimeout:-1 tag:0];
-    
-    //    });
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self.clientSocket writeData:mutableData withTimeout:-1 tag:0];
+    });
     
 }
 
-/**
- *  处理收到的音频数据
- *
- *  @param audioData 音频数据(需要进行格式处理才能播放)
- */
-- (void)handleReceivedAudioData:(NSData *)audioData
+#pragma mark *************************************************socket接受到数据局部处理****************************************************************
+// 00
+- (void)handleCommonResponseData:(NSData *)data
 {
+    NSString *str = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+    // 如果是重新连接到频道对讲的节点服务器
+    if ([SocketCommandIdentifyLD isEqualToString:str] && self.sender.length && self.channel.length ) {
+        self.sender = nil;
+        self.channel = nil;
+        [self sendString:[NSString stringWithFormat:@"%@|%@|%@\n",SocketCommandIdentifyGM, self.sender, self.channel]];
+    }
+}
+
+/**
+ *  处理收到的频道对讲邀请
+ *
+ *  @param invitationData 邀请数据
+ */
+- (void)handleChannelInviteation:(NSData *)invitationData
+{
+    NSString *str = [[NSString alloc] initWithData:invitationData encoding:NSUTF8StringEncoding];
+    NSArray *tempArray = [str componentsSeparatedByString:@"|"];
     
+    NSString *senderInfo = tempArray[1];
+    NSString *channelInfo = tempArray[2];
+    NSString *nodeServerIP = nil;
+    NSString *nodeServerPort = nil;
+    if (3 < tempArray.count) {
+        nodeServerIP = tempArray[2];
+        nodeServerPort = tempArray.lastObject;
+    }
+    
+    if ([self.delegate respondsToSelector:@selector(whetherAcceptChannelInvitation:completion:)]) {
+        __weak typeof(self) weakSelf = self;
+        [self.delegate whetherAcceptChannelInvitation:str completion:^(BOOL result, NSString *blockSender, NSString *blockChannel) {
+            if (result) { // 接受邀请,
+                if (nodeServerPort.length && nodeServerIP.length) {
+                    [weakSelf disconnectManagerServerAndConnectNodeServer:nodeServerIP port:nodeServerPort];
+                }else{
+                    NSString *message = [NSString stringWithFormat:@"%@|%@|%@\n", SocketCommandIdentifyGS, blockSender, blockChannel];
+                    [weakSelf sendString:message];
+                }
+            }
+        }];
+    }
+}
+
+#pragma mark *************************************************异常处理******************************************************************
+- (void)handleExceptionFromServer:(NSData *)data
+{
+    if (data.length < 2) return;
+    NSData *errorCodeData = [data subdataWithRange:NSMakeRange(0, 2)];
+    NSString *errorCodeStr = [[NSString alloc] initWithData:errorCodeData encoding:NSUTF8StringEncoding];
+    NSInteger errorCode = errorCodeStr.integerValue;
+    __weak typeof(self) weakSelf = self;
+    switch (errorCode) {
+        case SocketExceptionTypeNobodyOnTalk:
+            // 没人对讲
+            if ([self.delegate respondsToSelector:@selector(whetherInviteOtherChannelMemeberAftercompletion:)]) {
+                [self.delegate whetherInviteOtherChannelMemeberAftercompletion:^(BOOL result, NSString *blockSender, NSString *blockChannel) {
+                    if (result) {
+                        [weakSelf sendString:[NSString stringWithFormat:@"%@|%@|%@\n",SocketCommandIdentifyGM, blockSender, blockChannel]];
+                    }
+                }];
+            }
+            
+            break;
+        case SocketExceptionTypeFriendNotOnline:
+            // 好友不在线
+            break;
+            
+        default:
+            break;
+    }
+    
+}
+
+
+
+#pragma mark ***************************************************频道对讲************************************************************************
+// 加入对讲
+- (void)requestJoinChannelTalkback:(NSString *)channelJsonModel andFromUser:(NSString *)fromUser
+{
+    NSString *message = [NSString stringWithFormat:@"%@|%@|%@\n", SocketCommandIdentifyGS, fromUser, channelJsonModel];
+    [self sendString:message];
+}
+
+// 退出对讲
+- (void)quiteCurrentChannelTalkback:(NSString *)channelJsonModel andFromUser:(NSString *)fromUser
+{
+    NSString *message = [NSString stringWithFormat:@"%@|%@|%@\n", SocketCommandIdentifyEG, fromUser, channelJsonModel];
+    [self sendString:message];
+
+}
+
+
+
+#pragma mark send package data
+- (void)sendString:(NSString *)message
+{
+    NSData *data = [message dataUsingEncoding:NSUTF8StringEncoding];
+    [self.clientSocket writeData:data withTimeout:TimeOut tag:0];
 }
 
 #pragma mark get
@@ -434,6 +571,7 @@ int convertDataToInt(NSData *data)
 {
     return CFSwapInt32BigToHost(*(int*)([data bytes]));
 }
+
 
 
 @end
