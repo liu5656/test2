@@ -10,7 +10,7 @@
 #import "GCDAsyncSocket.h"
 #import "MessageData.h"
 
-#define SocketManagerServerIP @"192.168.77.109"
+#define SocketManagerServerIP @"192.168.77.118"
 #define SocketManagerServerPort 10000
 #define TimeOut 30
 

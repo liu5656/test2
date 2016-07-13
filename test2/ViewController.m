@@ -25,7 +25,7 @@
 {
     [super viewDidLoad];
     self.serverSocket = [[AsyncSocket alloc] initWithDelegate:self];
-    [self.serverSocket acceptOnPort:8000 error:nil];
+    [self.serverSocket acceptOnPort:10000 error:nil];
 }
 
 -(void)onSocket:(AsyncSocket *)sock didAcceptNewSocket:(AsyncSocket *)newSocket{
