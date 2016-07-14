@@ -11,8 +11,8 @@
 #import "MessageData.h"
 #import "NSString+Model.h"
 
-#define SocketManagerServerIP @"192.168.77.109"
-#define SocketManagerServerPort 10000
+#define SocketManagerServerIP @"192.168.20.183"
+#define SocketManagerServerPort 10001
 #define TimeOut 30
 
 #define UserID @"user10300"
@@ -34,14 +34,14 @@
 #define SocketCommandIdentifyGS @"GS" // 发出进入频道对讲的指令：GS|{"userid":"user10300","username":"我是大魔王"}|{"groupId":"10060","groupName":"飙车俱乐部"}
 #define SocketCommandIdentifyEG @"EG" // 退出当前正在对讲的频道 EG|{"userid":"user10300","username":"我是大魔王"}|{"groupId":"10060","groupName":"飙车俱乐部"}
 #define SocketCommandIdentifyGM @"GM" // 进入频道没人对讲时,邀请 GM|{"userid":"user10300","username":"我是大魔王"}|{"groupId":"10060","groupName":"飙车俱乐部"}
-
+#define SocketCommandIdentifyGT @"GT" // 频道对讲语音结束标志 GT|发送者对象 GT|{"userid":"user10300","username":"user10300"}
 
 #pragma mark receive command
 #define SocketCommandIdentifyAB @"AB" // 管理服务器返回节点服务器和端口
 #define SocketCommandIdentifyFN @"FN" // 收到好友对讲请求
 #define SocketCommandIdentify00 @"00" // 收到回复00
 #define SocketCommandIdentifyEX @"EX" // 异常
-#define SocketCommandIdentifyET @"ET" // 音频结束
+#define SocketCommandIdentifyET @"ET" // 好友对讲语音结束标志 ET|发送者对象 ET|{"userid":"user10300","username":"user10300"}
 #define SocketCommandIdentifyAL @"AL" // 频道有人在对讲,节点相同,进入频道后就可以收到 AL|已经进入的人员列表
 #define SocketCommandIdentifyGB @"GB" // 频道有人在对讲,节点不同,需要连接到此返回的节点服务器和端口后发送LD命令成功后就可以使用GS进入频道
 
@@ -72,6 +72,12 @@ typedef enum : NSUInteger {
 @property (nonatomic, strong) NSData *useridData;
 
 @property (nonatomic, assign) int number;
+
+@property (nonatomic, strong) NSMutableDictionary *channelAudioDataDictionary;
+@property (nonatomic, strong) NSMutableArray *channelAudioDataIndexArray;
+
+@property (nonatomic, copy) NSString *connectedHost;
+@property (nonatomic, assign) NSInteger port;
 
 
 // 接受邀请时,需要跟换节点服务器时暂时保存这两个对象
@@ -182,7 +188,7 @@ typedef enum : NSUInteger {
         // 偏移量指向包长度字节开始位置
         offset += 2;
         
-        if ([SocketCommandIdentifySM isEqualToString:messageTypeStr]) { // 收到音频数据
+        if ([SocketCommandIdentifySM isEqualToString:messageTypeStr]) { // 收到好友音频数据
             // 取数据前判断
             if (data.length < (offset + 4)) {
                 offset -= 2;
@@ -213,9 +219,7 @@ typedef enum : NSUInteger {
             
             offset += (useridData.length + 1); // 加1是为了跨过换行符
          
-        }else if ([SocketCommandIdentifySG isEqualToString:messageTypeStr]) { // 频道收到音频数据
-            
-        }else if ([SocketCommandIdentifyET isEqualToString:messageTypeStr]) { // 音频结束
+        }else if ([SocketCommandIdentifyET isEqualToString:messageTypeStr]) { // 好友语音结束标志
             NSData *tempData = [self offset:data andOffset:&offset];
             if (tempData.length == 0) break;
             
@@ -227,7 +231,6 @@ typedef enum : NSUInteger {
                 NSLog(@"创建文件失败");
             }
             self.audioData = nil;
-            
         }else if ([SocketCommandIdentifyAB isEqualToString:messageTypeStr]) { // 管理服务器回复
             NSString *dataStr = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
             
@@ -264,6 +267,83 @@ typedef enum : NSUInteger {
         /*
          ******************************频道****************************************
          */
+        }else if ([SocketCommandIdentifySG isEqualToString:messageTypeStr]) { // 收到频道音频数据
+            if (data.length < (offset + 4)) {
+                offset -= 2;
+                break;
+            }
+            
+            NSInteger currentAudioLength = convertDataToInt([data subdataWithRange:NSMakeRange(offset, 4)]); // 音频文件长度占四个字节
+            offset += 4;
+            
+            if (data.length < (offset + currentAudioLength)){
+                offset -= 6;
+                break;
+            }
+            NSData *tempData = [data subdataWithRange:NSMakeRange(offset, currentAudioLength)];
+            
+            
+            // 偏移量指向userid开始位置
+            offset += currentAudioLength;
+            
+            NSRange range = [data rangeOfData:[@"\n" dataUsingEncoding:NSASCIIStringEncoding] options:0 range:NSMakeRange(offset, data.length - offset)];
+            if (range.location != NSNotFound) {
+                useridData = [data subdataWithRange:NSMakeRange(offset, range.location - offset)];
+                NSString *str = [[NSString alloc] initWithData:useridData encoding:NSUTF8StringEncoding];
+                
+#warning 加竖线配合频道音频结束标志,待会儿记得删除,
+//                str = [@"|" stringByAppendingString:str];
+                NSLog(@"当前线程:%@,发送者的id:%@",[NSThread currentThread], str);
+                
+                NSMutableData *valueData = [self.channelAudioDataDictionary valueForKey:str];
+                if (valueData.length) {
+                    [valueData appendData:tempData];
+                }else{
+                    NSMutableData *mutableData = tempData.mutableCopy;
+                    [self.channelAudioDataDictionary setObject:mutableData forKey:str];
+                    [self.channelAudioDataIndexArray addObject:str];
+                }
+            }else{
+                offset -= (currentAudioLength + 4 + 2);
+                break; // 没找到userid,就跳出去,并保留当前剩下的data
+            }
+            
+            offset += (useridData.length + 1); // 加1是为了跨过换行符
+            
+        }else if ([SocketCommandIdentifyGT isEqualToString:messageTypeStr]) { // 频道语音结束标志
+            NSData *tempData = [self offset:data andOffset:&offset];
+            if (tempData.length == 0) break;
+
+            NSString *userInfo = [[NSString alloc] initWithData:tempData encoding:NSUTF8StringEncoding];
+            
+            NSArray *tempArray = [userInfo componentsSeparatedByString:@"|"];
+            NSString *string = tempArray.firstObject;
+            NSDictionary *dict = string.toDictionary;
+            NSString *userid = [dict valueForKey:@"userid"];
+            
+            NSMutableData *userAudioData = [self.channelAudioDataDictionary valueForKey:userid];
+            if (userAudioData.length) { // 频道语音字典里面存在
+                
+                NSString *path = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.mp3",userid]];
+                
+                BOOL isExist = [[NSFileManager defaultManager] fileExistsAtPath:path];
+                if (isExist) {
+                    [[NSFileManager defaultManager] removeItemAtPath:path error:nil];
+                }
+                
+                BOOL result = [userAudioData writeToFile:path atomically:YES];
+                if (result) {
+                    NSLog(@"创建文件成功:%@",path);
+                }else{
+                    NSLog(@"创建文件失败");
+                }
+                
+                [self.channelAudioDataDictionary removeObjectForKey:userid];
+//                for (<#initialization#>; <#condition#>; <#increment#>) {
+//                    <#statements#>
+//                }
+                
+            }
         }else if ([SocketCommandIdentifyGM isEqualToString:messageTypeStr]) { // 收到频道邀请
             NSData *tempData = [self offset:data andOffset:&offset];
             if (tempData.length == 0) break;
@@ -275,7 +355,21 @@ typedef enum : NSUInteger {
             
             NSString *list = [[NSString alloc] initWithData:tempData encoding:NSUTF8StringEncoding];
             NSLog(@"进入频道,得到对讲人员列表:%@",list);
+        }else if ([SocketCommandIdentifyNT isEqualToString:messageTypeStr]) { // 有人进入频道,
+            NSData *tempData = [self offset:data andOffset:&offset];
+            if (tempData.length == 0) break;
             
+            NSString *incomer = [[NSString alloc] initWithData:tempData encoding:NSUTF8StringEncoding];
+            NSLog(@"有新人进入频道:%@",incomer);
+            
+        }else if ([SocketCommandIdentifyEG isEqualToString:messageTypeStr]) { // 有人退出频道,
+            NSData *tempData = [self offset:data andOffset:&offset];
+            if (tempData.length == 0) break;
+            
+            NSString *dropout = [[NSString alloc] initWithData:tempData encoding:NSUTF8StringEncoding];
+            NSLog(@"有人退出频道:%@",dropout);
+            
+
         }else if ([SocketCommandIdentifyEX isEqualToString:messageTypeStr]) { // 异常
             NSLog(@"收到命令:EX");
             NSData *tempData = [self offset:data andOffset:&offset];
@@ -305,7 +399,7 @@ typedef enum : NSUInteger {
     NSData *tempData = nil;
     NSRange range = [data rangeOfData:[@"\n" dataUsingEncoding:NSUTF8StringEncoding] options:0 range:NSMakeRange(*offset, data.length - *offset)];
     if (range.location != NSNotFound) {
-        tempData = [data subdataWithRange:NSMakeRange(*offset, range.location - *offset)];
+        tempData = [data subdataWithRange:NSMakeRange(*offset + 1, range.location - *offset)];
         *offset = range.location;
     }else{
         *offset -= 2;
@@ -396,7 +490,7 @@ typedef enum : NSUInteger {
     NSString *tempIDStr =  [senderid stringByAppendingString:@"\n"];
     NSData *idData = [tempIDStr dataUsingEncoding:NSUTF8StringEncoding];
     
-    NSString *commandStr = [NSString stringWithFormat:@"%@|",type == TalkbackTypeFriend ? SocketCommandIdentifySM : SocketCommandIdentifySG];
+    NSString *commandStr = [NSString stringWithFormat:@"%@",type == TalkbackTypeFriend ? SocketCommandIdentifySM : SocketCommandIdentifySG];
     NSData *commandData = [commandStr dataUsingEncoding:NSUTF8StringEncoding];
     
     [mutableData appendData:commandData];
@@ -462,8 +556,8 @@ typedef enum : NSUInteger {
 #pragma mark *************************************************异常处理******************************************************************
 - (void)handleExceptionFromServer:(NSData *)data
 {
-    if (data.length < 2) return;
-    NSData *errorCodeData = [data subdataWithRange:NSMakeRange(0, 2)];
+    if (data.length < 3) return;
+    NSData *errorCodeData = [data subdataWithRange:NSMakeRange(1, 2)];
     NSString *errorCodeStr = [[NSString alloc] initWithData:errorCodeData encoding:NSUTF8StringEncoding];
     NSInteger errorCode = errorCodeStr.integerValue;
     __weak typeof(self) weakSelf = self;
@@ -546,6 +640,14 @@ typedef enum : NSUInteger {
         _audioData = [NSMutableData data];
     }
     return _audioData;
+}
+
+- (NSMutableDictionary *)channelAudioDataDictionary
+{
+    if (!_channelAudioDataDictionary) {
+        _channelAudioDataDictionary = [NSMutableDictionary dictionary];
+    }
+    return _channelAudioDataDictionary;
 }
 
 #pragma mark life circle

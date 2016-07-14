@@ -12,6 +12,13 @@
 
 #import <AVFoundation/AVFoundation.h>
 
+
+#define CurrentUser @"{\"userid\":\"user10300\",\"username\":\"billie_jean\"}"
+#define DestinationChannel @"{\"groupId\":\"10082\",\"groupName\":\"ccccc\"}"
+
+#define FriendID @"user10100"
+#define ChannelID @"10082"
+
 @interface DDTalkbackDemoViewController ()<AVCaptureAudioDataOutputSampleBufferDelegate, DDTalkbackManagerDelegate, UIAlertViewDelegate>
 
 @property (nonatomic, strong) DDTalkbackManager *talkbackManager;
@@ -30,7 +37,7 @@
 
 @implementation DDTalkbackDemoViewController
 - (IBAction)inviteFriendAction:(UIButton *)sender {
-    [self.talkbackManager inviteGoodFriendTalkbackFromUser:@"{\"userid\":\"user10058\",\"username\",\"zhangpengfei\"}" toUserID:@"user10100"];
+    [self.talkbackManager inviteGoodFriendTalkbackFromUser:CurrentUser toUserID:FriendID];
 }
 - (IBAction)startSendAudioAction:(UIButton *)sender {
     [self startSendAudioType:TalkbackTypeFriend];
@@ -49,13 +56,17 @@
 
 - (IBAction)joinChannelAction:(UIButton *)sender {
 //    GS||
-    [[DDTalkbackManager sharedInstance] requestJoinChannelTalkback:@"{\"groupId\":\"10082\",\"groupName\":\"ccccc\"}" andFromUser:@"{\"userid\":\"user10300\",\"username\":\"billie_jean\"}"];
+    [[DDTalkbackManager sharedInstance] requestJoinChannelTalkback:DestinationChannel andFromUser:CurrentUser];
 }
 - (IBAction)sendAudioToChannel:(UIButton *)sender {
-    [self startSendAudioType:TalkbackTypeChannel];
+//    [self startSendAudioType:TalkbackTypeChannel];
+    
+    NSString *path = [[NSBundle mainBundle] pathForResource:@"1.mp3" ofType:nil];
+    NSData *data = [NSData dataWithContentsOfFile:path];
+    [self.talkbackManager sendAudioData:data andSenderID:ChannelID withTalkbackType:TalkbackTypeChannel];
 }
 - (IBAction)QuiteChannel:(UIButton *)sender {
-    [[DDTalkbackManager sharedInstance] quiteCurrentChannelTalkback:@"{\"groupId\":\"10082\",\"groupName\":\"ccccc\"}" andFromUser:@"{\"userid\":\"user10300\",\"username\":\"billie_jean\"}"];
+    [[DDTalkbackManager sharedInstance] quiteCurrentChannelTalkback:DestinationChannel andFromUser:CurrentUser];
 }
 
 
@@ -138,13 +149,13 @@
         
         
         
-        _acceptChannelCallback(YES, @"{\"userid\":\"user10058\",\"username\":\"billie_jean\"}",array.lastObject);
+        _acceptChannelCallback(YES, CurrentUser,array.lastObject);
     }else if (_goodFriendInviteation && 1 == buttonIndex) { // 接受好友邀请
-    
+        _goodFriendInviteation(YES,CurrentUser, parameter);
     }else if (_goodFriendInviteation && 0 == buttonIndex) { // 拒绝好友邀请
-    
+         _goodFriendInviteation(NO,CurrentUser, parameter);
     }else if (_inviteChannellCallback && 1 == buttonIndex) { // 邀请好友进入频道
-        _inviteChannellCallback(YES, @"{\"groupId\":\"10060\",\"groupName\":\"飙车俱乐部\"}", @"{\"userid\":\"user10058\",\"username\":\"billie_jean\"}");
+        _inviteChannellCallback(YES, CurrentUser,DestinationChannel);
     }
     
     _goodFriendInviteation = nil;
