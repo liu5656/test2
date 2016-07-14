@@ -16,7 +16,7 @@
 #define CurrentUser @"{\"userid\":\"user10300\",\"username\":\"billie_jean\"}"
 #define DestinationChannel @"{\"groupId\":\"10082\",\"groupName\":\"ccccc\"}"
 
-#define FriendID @"user10100"
+#define FriendID @"user10053"
 #define ChannelID @"10082"
 
 @interface DDTalkbackDemoViewController ()<AVCaptureAudioDataOutputSampleBufferDelegate, DDTalkbackManagerDelegate, UIAlertViewDelegate>
@@ -151,9 +151,9 @@
         
         _acceptChannelCallback(YES, CurrentUser,array.lastObject);
     }else if (_goodFriendInviteation && 1 == buttonIndex) { // 接受好友邀请
-        _goodFriendInviteation(YES,CurrentUser, parameter);
+        _goodFriendInviteation(YES,CurrentUser, FriendID);
     }else if (_goodFriendInviteation && 0 == buttonIndex) { // 拒绝好友邀请
-         _goodFriendInviteation(NO,CurrentUser, parameter);
+         _goodFriendInviteation(NO,CurrentUser, FriendID);
     }else if (_inviteChannellCallback && 1 == buttonIndex) { // 邀请好友进入频道
         _inviteChannellCallback(YES, CurrentUser,DestinationChannel);
     }

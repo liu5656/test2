@@ -264,6 +264,20 @@ typedef enum : NSUInteger {
             NSLog(@"收到命令:ED");
             NSData *tempData = [self offset:data andOffset:&offset];
             if (tempData.length == 0) break;
+            
+        }else if ([SocketCommandIdentifyFR isEqualToString:messageTypeStr]) { // 断开和好友的对讲回复
+            
+            NSData *tempData = [self offset:data andOffset:&offset];
+            if (tempData.length == 0) break;
+            NSString *errStr = [[NSString alloc] initWithData:tempData encoding:NSUTF8StringEncoding];
+            NSLog(@"收到命令:FR---%@",errStr);
+        }else if ([SocketCommandIdentifyFA isEqualToString:messageTypeStr]) { // 断开和好友的对讲回复
+            
+            NSData *tempData = [self offset:data andOffset:&offset];
+            if (tempData.length == 0) break;
+            NSString *errStr = [[NSString alloc] initWithData:tempData encoding:NSUTF8StringEncoding];
+            NSLog(@"收到命令:FA---%@",errStr);
+            
         /*
          ******************************频道****************************************
          */
@@ -371,7 +385,7 @@ typedef enum : NSUInteger {
             
 
         }else if ([SocketCommandIdentifyEX isEqualToString:messageTypeStr]) { // 异常
-            NSLog(@"收到命令:EX");
+            
             NSData *tempData = [self offset:data andOffset:&offset];
             if (tempData.length == 0) break;
             [self handleExceptionFromServer:tempData];
@@ -429,12 +443,12 @@ typedef enum : NSUInteger {
     [self.clientSocket writeData:data withTimeout:TimeOut tag:0];
 }
 
-- (void)refuseTalkbackInvitationOfFriendID:(NSString *)toUserID fromUser:(NSString *)fromUser
-{
-    NSString *message = [NSString stringWithFormat:@"%@|%@|%@\n", SocketCommandIdentifyED, fromUser, toUserID];
-    NSData *data = [message dataUsingEncoding:NSUTF8StringEncoding];
-    [self.clientSocket writeData:data withTimeout:TimeOut tag:0];
-}
+//- (void)refuseTalkbackInvitationOfFriendID:(NSString *)toUserID fromUser:(NSString *)fromUser
+//{
+//    NSString *message = [NSString stringWithFormat:@"%@|%@|%@\n", SocketCommandIdentifyED, fromUser, toUserID];
+//    NSData *data = [message dataUsingEncoding:NSUTF8StringEncoding];
+//    [self.clientSocket writeData:data withTimeout:TimeOut tag:0];
+//}
 
 /**
  *  收到好友对讲请求
@@ -467,7 +481,7 @@ typedef enum : NSUInteger {
     NSDictionary *fromUserDict = [NSJSONSerialization JSONObjectWithData:jsonData options:NSJSONReadingMutableLeaves error:nil];
     NSString *fromUserName = [fromUserDict valueForKey:@"username"];
     NSString *fromUserID = [fromUserDict valueForKey:@"userid"];
-    NSString *message = [NSString stringWithFormat:@"%@|{\"userid\":\"%@\",\"username\":\"%@\"}|%@",result?SocketCommandIdentifyFA:SocketCommandIdentifyFN, fromUserID, fromUserName, toUserID];
+    NSString *message = [NSString stringWithFormat:@"%@|{\"userid\":\"%@\",\"username\":\"%@\"}|%@\n",result?SocketCommandIdentifyFA:SocketCommandIdentifyFR, fromUserID, fromUserName, toUserID];
     NSData *data = [message dataUsingEncoding:NSUTF8StringEncoding];
     [self.clientSocket writeData:data withTimeout:TimeOut tag:0];
 }
@@ -556,6 +570,8 @@ typedef enum : NSUInteger {
 #pragma mark *************************************************异常处理******************************************************************
 - (void)handleExceptionFromServer:(NSData *)data
 {
+    NSString *exStr = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+    NSLog(@"收到命令:EX----%@",exStr);
     if (data.length < 3) return;
     NSData *errorCodeData = [data subdataWithRange:NSMakeRange(1, 2)];
     NSString *errorCodeStr = [[NSString alloc] initWithData:errorCodeData encoding:NSUTF8StringEncoding];

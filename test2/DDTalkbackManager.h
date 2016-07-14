@@ -75,13 +75,13 @@ typedef void (^channelCallback)(BOOL result, NSString *blockSender, NSString *bl
  */
 - (void)inviteGoodFriendTalkbackFromUser:(NSString *)fromUser toUserID:(NSString *)toUserID;
 
-/**
- *  拒绝好友邀请 FR|发送者对象|接收者ID FR|{"userid":"user10200","username":"user10200"}|user10300
- *
- *  @param toUserID 被拒绝的好友id
- *  @param fromUser 用户json对象
- */
-- (void)refuseTalkbackInvitationOfFriendID:(NSString *)toUserID fromUser:(NSString *)fromUser;
+///**
+// *  拒绝好友邀请 FR|发送者对象|接收者ID FR|{"userid":"user10200","username":"user10200"}|user10300
+// *
+// *  @param toUserID 被拒绝的好友id
+// *  @param fromUser 用户json对象
+// */
+//- (void)refuseTalkbackInvitationOfFriendID:(NSString *)toUserID fromUser:(NSString *)fromUser;
 
 
 /**
