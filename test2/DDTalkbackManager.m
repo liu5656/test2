@@ -15,9 +15,9 @@
 #define SocketManagerServerPort 10001
 #define TimeOut 30
 
-#define UserID @"user10300"
+#define UserID @"user10020"
 #define Username @"bigheart"
-#define FriendID @"user10100"
+#define FriendID @"user10058"
 
 #pragma mark send command
 #define SocketCommandIdentifyAC @"AC" // 管理服务器指令
@@ -53,9 +53,9 @@
 
 
 typedef enum : NSUInteger {
-    SocketExceptionTypeNobodyOnline = 0, // 没人在线,没人对讲
-    SocketExceptionTypeNobodyOnTalk = 91, // 有人在线,没人对讲
-    SocketExceptionTypeFriendNotOnline = 90, // 好友不在线
+    SocketExceptionTypeNobodyOnline = 0,            // 没人在线,没人对讲
+    SocketExceptionTypeNobodyOnTalk = 91,           // 有人在线,没人对讲
+    SocketExceptionTypeFriendNotOnline = 90,        // 好友不在线
 } SocketExceptionType;
 
 
@@ -77,12 +77,14 @@ typedef enum : NSUInteger {
 @property (nonatomic, strong) NSMutableArray *channelAudioDataIndexArray;
 
 @property (nonatomic, copy) NSString *connectedHost;
-@property (nonatomic, assign) NSInteger port;
+@property (nonatomic, copy) NSString *port;
 
 
 // 接受邀请时,需要跟换节点服务器时暂时保存这两个对象
 @property (nonatomic, strong) NSString *sender;
 @property (nonatomic, copy) NSString *channel;
+
+@property (nonatomic, assign) NSInteger inviteFriendCountDown;
 
 @end
 
@@ -115,6 +117,9 @@ typedef enum : NSUInteger {
     [self.clientSocket disconnect];
     self.clientSocket = nil;
     
+    self.connectedHost = host;
+    self.port = portStr;
+    
     dispatch_queue_t serialQueue = dispatch_queue_create([@"serial_queue" UTF8String], DISPATCH_QUEUE_SERIAL);
     self.clientSocket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:serialQueue];
     NSError *error = nil;
@@ -146,7 +151,7 @@ typedef enum : NSUInteger {
         [self.clientSocket writeData:[LDcommand dataUsingEncoding:NSUTF8StringEncoding] withTimeout:-1 tag:0];
         
     }
-    [self.clientSocket readDataWithTimeout:15 tag:0];
+    [self.clientSocket readDataWithTimeout:-1 tag:0];
 }
 
 // 和socket服务器断开连接
@@ -154,7 +159,7 @@ typedef enum : NSUInteger {
 {
     NSLog(@"did disconnect to %@,error:%@",sock.connectedHost, err);
     if (![sock.connectedHost isEqualToString:SocketManagerServerIP]) {
-        [self.clientSocket connectToHost:sock.connectedHost onPort:sock.connectedPort error:nil];
+        [self.clientSocket connectToHost:self.connectedHost onPort:self.port.integerValue error:nil];
     }
 }
 
@@ -238,11 +243,6 @@ typedef enum : NSUInteger {
             [self disconnectManagerServerAndConnectNodeServer:tempArray[1] port:tempArray.lastObject];
             NSData *tempData = [self offset:data andOffset:&offset];
             if (tempData.length == 0) break;
-        }else if ([SocketCommandIdentify00 isEqualToString:messageTypeStr]) { // 其他回复
-            NSLog(@"收到命令:00--%@", [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]);
-            NSData *tempData = [self offset:data andOffset:&offset];
-            if (tempData.length == 0) break;
-            [self handleCommonResponseData:data];
         }else if ([SocketCommandIdentifyAC isEqualToString:messageTypeStr]) { // 连接管理服务器回复
             NSLog(@"收到命令:AC");
             NSData *tempData = [self offset:data andOffset:&offset];
@@ -265,18 +265,20 @@ typedef enum : NSUInteger {
             NSData *tempData = [self offset:data andOffset:&offset];
             if (tempData.length == 0) break;
             
-        }else if ([SocketCommandIdentifyFR isEqualToString:messageTypeStr]) { // 断开和好友的对讲回复
+        }else if ([SocketCommandIdentifyFR isEqualToString:messageTypeStr]) { // 拒绝好友的对讲邀请
             
             NSData *tempData = [self offset:data andOffset:&offset];
             if (tempData.length == 0) break;
             NSString *errStr = [[NSString alloc] initWithData:tempData encoding:NSUTF8StringEncoding];
             NSLog(@"收到命令:FR---%@",errStr);
-        }else if ([SocketCommandIdentifyFA isEqualToString:messageTypeStr]) { // 断开和好友的对讲回复
+            [self handleResultOfInvitationFromFriend:YES andReason:errStr];
+        }else if ([SocketCommandIdentifyFA isEqualToString:messageTypeStr]) { // 接受好友的对讲邀请
             
             NSData *tempData = [self offset:data andOffset:&offset];
             if (tempData.length == 0) break;
-            NSString *errStr = [[NSString alloc] initWithData:tempData encoding:NSUTF8StringEncoding];
-            NSLog(@"收到命令:FA---%@",errStr);
+            NSString *str = [[NSString alloc] initWithData:tempData encoding:NSUTF8StringEncoding];
+            NSLog(@"收到命令:FA---%@",str);
+            [self handleResultOfInvitationFromFriend:YES andReason:str];
             
         /*
          ******************************频道****************************************
@@ -305,8 +307,6 @@ typedef enum : NSUInteger {
                 useridData = [data subdataWithRange:NSMakeRange(offset, range.location - offset)];
                 NSString *str = [[NSString alloc] initWithData:useridData encoding:NSUTF8StringEncoding];
                 
-#warning 加竖线配合频道音频结束标志,待会儿记得删除,
-//                str = [@"|" stringByAppendingString:str];
                 NSLog(@"当前线程:%@,发送者的id:%@",[NSThread currentThread], str);
                 
                 NSMutableData *valueData = [self.channelAudioDataDictionary valueForKey:str];
@@ -383,6 +383,11 @@ typedef enum : NSUInteger {
             NSString *dropout = [[NSString alloc] initWithData:tempData encoding:NSUTF8StringEncoding];
             NSLog(@"有人退出频道:%@",dropout);
             
+        }else if ([SocketCommandIdentify00 isEqualToString:messageTypeStr]) { // 其他回复
+            NSLog(@"收到命令:00--%@", [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]);
+            NSData *tempData = [self offset:data andOffset:&offset];
+            if (tempData.length == 0) break;
+            [self handleCommonResponseData:data];
 
         }else if ([SocketCommandIdentifyEX isEqualToString:messageTypeStr]) { // 异常
             
@@ -487,7 +492,7 @@ typedef enum : NSUInteger {
 }
 
 
-#pragma mark ***************************************************发送或接收数据*******************************************************************
+#pragma mark ***************************************************开始发送,结束发送*******************************************************************
 - (void)sendAudioData:(NSData *)audioData andSenderID:(NSString *)senderid withTalkbackType:(TalkbackType)type
 {
     NSMutableData *mutableData = [NSMutableData data];
@@ -510,7 +515,7 @@ typedef enum : NSUInteger {
     [mutableData appendData:commandData];
     [mutableData appendData:lengthData];
     [mutableData appendData:audioData];
-    [mutableData appendData:idData];
+//    [mutableData appendData:idData];
     
     NSLog(@"send data length:%ld",mutableData.length);
     
@@ -520,16 +525,23 @@ typedef enum : NSUInteger {
     
 }
 
-#pragma mark *************************************************socket接受到数据局部处理****************************************************************
-// 00
-- (void)handleCommonResponseData:(NSData *)data
+- (void)finishSendAudioDataByType:(TalkbackType)type
 {
-    NSString *str = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-    // 如果是重新连接到频道对讲的节点服务器
-    if ([SocketCommandIdentifyLD isEqualToString:str] && self.sender.length && self.channel.length ) {
-        self.sender = nil;
-        self.channel = nil;
-        [self sendString:[NSString stringWithFormat:@"%@|%@|%@\n",SocketCommandIdentifyGM, self.sender, self.channel]];
+    NSString *sendStr = nil;
+    if (type == TalkbackTypeFriend) {
+        sendStr = SocketCommandIdentifyET;
+    }else{
+        sendStr = SocketCommandIdentifyGT;
+    }
+    sendStr = [sendStr stringByAppendingString:@"|{\"userid\":\"user10020\",\"username\":\"梨花哥\"}\n"];
+    [self sendString:sendStr];
+}
+
+#pragma mark *************************************************操作服务器返回的局部数据****************************************************************
+- (void)handleResultOfInvitationFromFriend:(BOOL)result andReason:(NSString *)reason
+{
+    if ([self.delegate respondsToSelector:@selector(inviteFriendResult:andReason:)]) {
+        [self.delegate inviteFriendResult:result andReason:reason];
     }
 }
 
@@ -567,6 +579,20 @@ typedef enum : NSUInteger {
     }
 }
 
+// 00
+- (void)handleCommonResponseData:(NSData *)data
+{
+    NSString *str = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+    NSLog(@"__________________%@",str);
+    // 如果是重新连接到频道对讲的节点服务器
+    if ([SocketCommandIdentifyLD isEqualToString:str] && self.sender.length && self.channel.length ) {
+        self.sender = nil;
+        self.channel = nil;
+        [self sendString:[NSString stringWithFormat:@"%@|%@|%@\n",SocketCommandIdentifyGM, self.sender, self.channel]];
+    }else if (SocketCommandIdentifyFA){
+        
+        }
+}
 #pragma mark *************************************************异常处理******************************************************************
 - (void)handleExceptionFromServer:(NSData *)data
 {
@@ -591,6 +617,9 @@ typedef enum : NSUInteger {
             break;
         case SocketExceptionTypeFriendNotOnline:
             // 好友不在线
+            
+            [self handleResultOfInvitationFromFriend:NO andReason:@"好友不在线"];
+            
             break;
             
         default:
@@ -638,6 +667,7 @@ typedef enum : NSUInteger {
 
 - (void)sendHeartBeatPacket
 {
+    
     [self.clientSocket writeData:[@"CK|\n" dataUsingEncoding:NSUTF8StringEncoding] withTimeout:15 tag:0];
 
 }

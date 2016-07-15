@@ -46,6 +46,14 @@ typedef void (^channelCallback)(BOOL result, NSString *blockSender, NSString *bl
  */
 - (void)whetherAcceptChannelInvitation:(NSString *)channel completion:(channelCallback)callback;
 
+/**
+ *  邀请好友对讲结果回调
+ *
+ *  @param result 是否连接和好友的对讲 如果接受为YES,其他为NO
+ *  @param reason 接受 拒绝 好友不在线
+ */
+- (void)inviteFriendResult:(BOOL)result andReason:(NSString *)reason;
+
 
 @end
 
@@ -63,6 +71,9 @@ typedef void (^channelCallback)(BOOL result, NSString *blockSender, NSString *bl
  *  @param type      目标类型,好友 频道
  */
 - (void)sendAudioData:(NSData *)audioData andSenderID:(NSString *)senderid withTalkbackType:(TalkbackType)type;
+
+- (void)finishSendAudioDataByType:(TalkbackType)type;
+
 /**
  ********************************************好友对讲************************************************************************************
  */

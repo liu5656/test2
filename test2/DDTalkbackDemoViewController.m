@@ -13,10 +13,10 @@
 #import <AVFoundation/AVFoundation.h>
 
 
-#define CurrentUser @"{\"userid\":\"user10300\",\"username\":\"billie_jean\"}"
+#define CurrentUser @"{\"userid\":\"user10020\",\"username\":\"梨花哥\"}"
 #define DestinationChannel @"{\"groupId\":\"10082\",\"groupName\":\"ccccc\"}"
 
-#define FriendID @"user10053"
+#define FriendID @"user10058"
 #define ChannelID @"10082"
 
 @interface DDTalkbackDemoViewController ()<AVCaptureAudioDataOutputSampleBufferDelegate, DDTalkbackManagerDelegate, UIAlertViewDelegate>
@@ -33,6 +33,8 @@
 
 @property (nonatomic, assign) BOOL isChannel;
 
+@property (nonatomic, assign) NSInteger length;
+
 @end
 
 @implementation DDTalkbackDemoViewController
@@ -41,9 +43,21 @@
 }
 - (IBAction)startSendAudioAction:(UIButton *)sender {
     [self startSendAudioType:TalkbackTypeFriend];
+//    NSString *path = [[NSBundle mainBundle] pathForResource:@"1.mp3" ofType:nil];
+//    NSData *data= [NSData dataWithContentsOfFile:path];
+//    
+//    
+//    [self.talkbackManager sendAudioData:data andSenderID:@"user10300" withTalkbackType:self.isChannel ? TalkbackTypeChannel :TalkbackTypeFriend];
+//    self.length += data.length;
+//    NSLog(@"+++++++++++++++++++%ld",self.length);
+
+    
+    
+    
 }
 - (IBAction)endSendAudioAction:(UIButton *)sender {
     [self stopSendAudio];
+    [[DDTalkbackManager sharedInstance] finishSendAudioDataByType:TalkbackTypeFriend];
 }
 
 - (void)viewDidLoad {
@@ -84,6 +98,7 @@
 {
     [self.session stopRunning];
     self.isChannel = NO;
+    self.length = 0;
 }
 
 
@@ -216,28 +231,30 @@
     NSData *data = [NSData dataWithBytes:buffer length:length];
     
     
-    NSMutableData *mutableData = [NSMutableData data];
+//    NSMutableData *mutableData = [NSMutableData data];
+//    
+//    NSData *smData = [@"SM" dataUsingEncoding:NSUTF8StringEncoding];
+//    
+//    
+//    NSUInteger a = data.length;
+//    Byte b[4];
+//    
+//    b[3] =  (a & 0xff);
+//    b[2] = (a >> 8 & 0xff);
+//    b[1] = (a >> 16 & 0xff);
+//    b[0] = (a >> 24 & 0xff);
+//    
+//    NSData *lengthData = [[NSData alloc] initWithBytes:b length:4];
+////    NSData *useridData = [@"user10100\n" dataUsingEncoding:NSUTF8StringEncoding];
+//    
+//    [mutableData appendData:smData];
+//    [mutableData appendData:lengthData];
+//    [mutableData appendData:data];
+////    [mutableData appendData:useridData];
     
-    NSData *smData = [@"SM" dataUsingEncoding:NSUTF8StringEncoding];
-    
-    
-    NSUInteger a = data.length;
-    Byte b[4];
-    
-    b[3] =  (a & 0xff);
-    b[2] = (a >> 8 & 0xff);
-    b[1] = (a >> 16 & 0xff);
-    b[0] = (a >> 24 & 0xff);
-    
-    NSData *lengthData = [[NSData alloc] initWithBytes:b length:4];
-    NSData *useridData = [@"user10100\n" dataUsingEncoding:NSUTF8StringEncoding];
-    
-    [mutableData appendData:smData];
-    [mutableData appendData:lengthData];
-    [mutableData appendData:data];
-    [mutableData appendData:useridData];
-    
-    [self.talkbackManager sendAudioData:mutableData andSenderID:@"user10300" withTalkbackType:self.isChannel ? TalkbackTypeChannel :TalkbackTypeFriend];
+    [self.talkbackManager sendAudioData:data andSenderID:@"user10020" withTalkbackType:self.isChannel ? TalkbackTypeChannel :TalkbackTypeFriend];
+    self.length += data.length;
+    NSLog(@"+++++++++++++++++++%ld",self.length);
     
     
 }
